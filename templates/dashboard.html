@@ -1,0 +1,15 @@
+
+<div class="card">
+    <h3>Bienvenue {{ session['user'] }}</h3>
+    <p>Gestion de votre musique</p>
+   
+    <!-- Lecteur Audio (Ici avec une musique d'exemple sur internet) -->
+    <audio controls style="width: 100%; margin-top: 10px;">
+        <source src="https://soundhelix.com" type="audio/mpeg">
+        Votre navigateur ne supporte pas le lecteur audio.
+    </audio>
+
+    <a href="/logout">
+        <button type="button">Déconnexion</button>
+    </a>
+</div>
