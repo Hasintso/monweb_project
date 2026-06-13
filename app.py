@@ -6,8 +6,12 @@ from flask import Flask, redirect, render_template, request, session, url_for
 app = Flask(__name__)
 app.secret_key = "I_COM_SECRET_KEY"
 
-# Utilisation du dossier /tmp pour obtenir les droits d'écriture sur Render
-DB_PATH = "/tmp/i_com.db"
+# --- ADAPTATION AUTOMATIQUE ANDROID / RENDER ---
+# Si le dossier /tmp existe (sur Render), on l'utilise, sinon on crée le fichier localement (sur Android)
+if os.path.exists("/tmp"):
+    DB_PATH = "/tmp/i_com.db"
+else:
+    DB_PATH = "i_com.db"
 
 
 # --- CRÉATION AUTOMATIQUE DE LA BASE DE DONNÉES ---
@@ -30,11 +34,11 @@ def initialiser_base_en_ligne():
         )
         conn.commit()
     except sqlite3.IntegrityError:
-        pass  # L'administrateur existe déjà, on ignore
+        pass  # L'administrateur existe déjà
     conn.close()
 
 
-# Lancement obligatoire avant la première requête
+# Lancement automatique
 initialiser_base_en_ligne()
 
 
