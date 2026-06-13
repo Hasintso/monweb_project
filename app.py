@@ -1,14 +1,18 @@
 
+import os
 import sqlite3
 from flask import Flask, redirect, render_template, request, session, url_for
 
 app = Flask(__name__)
 app.secret_key = "I_COM_SECRET_KEY"
 
+# Utilisation du dossier /tmp pour obtenir les droits d'écriture sur Render
+DB_PATH = "/tmp/i_com.db"
 
-# --- CRÉATION AUTOMATIQUE DE LA BASE DE DONNÉES SUR RENDER ---
+
+# --- CRÉATION AUTOMATIQUE DE LA BASE DE DONNÉES ---
 def initialiser_base_en_ligne():
-    conn = sqlite3.connect("i_com.db")
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute(
         """
@@ -26,17 +30,17 @@ def initialiser_base_en_ligne():
         )
         conn.commit()
     except sqlite3.IntegrityError:
-        pass  # L'administrateur existe déjà, aucun problème
+        pass  # L'administrateur existe déjà, on ignore
     conn.close()
 
 
-# On exécute la création automatique au démarrage du serveur
+# Lancement obligatoire avant la première requête
 initialiser_base_en_ligne()
 
 
 # --- VÉRIFICATION DES IDENTIFIANTS ---
 def verifier_utilisateur(username, password):
-    conn = sqlite3.connect("i_com.db")
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute(
         "SELECT * FROM users WHERE username = ? AND password = ?",
@@ -88,5 +92,5 @@ def logout():
 
 
 if __name__ == "__main__":
-    # debug=False obligatoire pour éviter le crash sur Android et Render
     app.run(host="0.0.0.0", port=5000, debug=False)
+    
