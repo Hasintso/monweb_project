@@ -6,22 +6,48 @@ app = Flask(__name__)
 app.secret_key = "I_COM_SECRET_KEY"
 
 
-# Fonction pour vérifier les identifiants dans SQLite3
+# --- CRÉATION AUTOMATIQUE DE LA BASE DE DONNÉES SUR RENDER ---
+def initialiser_base_en_ligne():
+    conn = sqlite3.connect("i_com.db")
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL
+    )
+    """
+    )
+    try:
+        cursor.execute(
+            "INSERT INTO users (username, password) VALUES (?, ?)",
+            ("admin", "123456"),
+        )
+        conn.commit()
+    except sqlite3.IntegrityError:
+        pass  # L'administrateur existe déjà, aucun problème
+    conn.close()
+
+
+# On exécute la création automatique au démarrage du serveur
+initialiser_base_en_ligne()
+
+
+# --- VÉRIFICATION DES IDENTIFIANTS ---
 def verifier_utilisateur(username, password):
     conn = sqlite3.connect("i_com.db")
     cursor = conn.cursor()
-
-    # Cherche l'utilisateur avec le bon mot de passe
     cursor.execute(
         "SELECT * FROM users WHERE username = ? AND password = ?",
         (username, password),
     )
     user = cursor.fetchone()
-
     conn.close()
-    return user  # Retourne l'utilisateur si il existe, sinon None
+    return user
 
 
+# --- LES ROUTES DE VOTRE SITE ---
 @app.route("/")
 def home():
     if "user" in session:
@@ -39,7 +65,6 @@ def login():
         username = request.form.get("username")
         password = request.form.get("password")
 
-        # Vérification dynamique via la base de données
         if verifier_utilisateur(username, password):
             session["user"] = username
             return redirect(url_for("dashboard"))
@@ -63,5 +88,5 @@ def logout():
 
 
 if __name__ == "__main__":
+    # debug=False obligatoire pour éviter le crash sur Android et Render
     app.run(host="0.0.0.0", port=5000, debug=False)
-    
