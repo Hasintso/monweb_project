@@ -53,7 +53,12 @@ code{background:#0f1220;padding:1px 5px;border-radius:4px}
 7. 🧸 <b>Ourson</b> : écrivez « l'ourson Teddy » (ou nounours, peluche). Il danse (« Teddy dansait ») et chante (« Teddy chantait "La la la !" » → bulle ♪ + mélodie). Dans le script : <code>perso Teddy ourson 500</code>, <code>Teddy danse</code>, <code>Teddy chante "La la la !"</code>. Tout personnage peut aussi danser.<br>
 ⚠️ L'image <code>ourson.png</code> doit être dans le même dossier que ce fichier. La mélodie s'entend en lecture, mais n'est pas enregistrée dans la vidéo .webm.</details>
 </section>
-<section class="card"><canvas id="cv" width="1280" height="720"></canvas><div id="status">Prêt.</div><video id="out" controls></video>
+<section class="card"><canvas id="cv" width="1280" height="720"></canvas><div id="status">Prêt.</div>
+<div style="border-top:1px solid var(--bd);padding-top:12px;margin-bottom:6px"><b>💃 Studio Danse</b> <span style="color:var(--mut);font-size:12.5px">1) cliquez sur un modèle · 2) choisissez un audio : il danse en suivant le rythme</span>
+<div class="btns" id="models" style="margin:10px 0">
+<button class="sec" data-m="ourson">🧸 Ourson</button><button class="sec" data-m="tom">👦 Tom</button><button class="sec" data-m="lea">👧 Léa</button><button class="sec" data-m="papa">👨 Papa</button><button class="sec" data-m="chat">🐱 Chat</button><button class="sec" data-m="chien">🐶 Chien</button></div>
+<div class="btns"><label style="background:#2a2f4d;color:#fff;border-radius:8px;padding:10px 16px;font-weight:600;cursor:pointer">🎵 Choisir un audio<input id="aud" type="file" accept="audio/*" hidden></label><button class="sec" id="bDemo">🥁 Rythme démo</button><button class="sec" id="bStop">⏹ Arrêter</button></div>
+<audio id="player" controls style="width:100%;margin-top:10px;display:none"></audio></div><video id="out" controls></video>
 <div class="btns"><a id="dl" class="btn" style="display:none" download="dessin-anime.webm">⬇ Télécharger la vidéo</a></div></section>
 </main>
 <script>
@@ -255,7 +260,7 @@ function frame(t,scenes){let acc=0,sc=scenes[scenes.length-1],lt=0;for(const s o
  const f=Math.max(0,Math.min(1,lt/.4,(sc.dur-lt)/.4));ctx.fillStyle='rgba(0,0,0,'+(1-f)+')';ctx.fillRect(0,0,W,H)}
 let raf=0;
 function run(rec,still){const{scenes,errs}=parse($('src').value);$('err').textContent=errs.join('\n');if(!scenes.length){$('status').textContent='Aucune scène.';return}
- cancelAnimationFrame(raf);FIRED.clear();LIVE=!still;if(still){frame(1,scenes);$('status').textContent='Écriture corrigée ✔';return}
+ cancelAnimationFrame(raf);cancelAnimationFrame(dRaf);dModel=null;FIRED.clear();LIVE=!still;if(still){frame(1,scenes);$('status').textContent='Écriture corrigée ✔';return}
  const total=scenes.reduce((a,s)=>a+s.dur,0);let mr,ch=[];
  if(rec){if(!window.MediaRecorder){$('status').textContent='Utilisez Chrome, Edge ou Firefox.';return}
   const mime=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'].find(m=>MediaRecorder.isTypeSupported(m));mr=new MediaRecorder(cv.captureStream(30),{mimeType:mime,videoBitsPerSecond:6e6});
@@ -264,6 +269,41 @@ function run(rec,still){const{scenes,errs}=parse($('src').value);$('err').textCo
  (function loop(now){try{const t=Math.max(0,(now-t0)/1000);if(t>=total){LIVE=false;frame(total-.01,scenes);if(mr)setTimeout(()=>mr.stop(),150);$('bPrev').disabled=$('bRec').disabled=false;if(!rec)$('status').textContent='Terminé.';return}
   frame(t,scenes);$('status').textContent=(rec?'Enregistrement… ':'Lecture… ')+Math.ceil(total-t)+' s';raf=requestAnimationFrame(loop)}
   catch(e){$('status').textContent='Erreur : '+e.message;$('bPrev').disabled=$('bRec').disabled=false}})(t0)}
+// ---------- studio danse ----------
+const PL={head:[[40,380],[70,220],[190,110],[380,40],[620,5],[850,30],[980,150],[1005,350],[960,520],[870,640],[700,700],[480,700],[340,690],[250,560],[190,440]],
+ aL:[[0,430],[80,400],[200,410],[300,470],[380,620],[420,780],[360,880],[250,860],[150,780],[30,650],[0,540]],
+ aR:[[790,700],[900,670],[990,740],[1020,880],[1000,1040],[900,1090],[790,1050],[770,900]],
+ lL:[[120,1130],[500,1140],[520,1300],[500,1536],[20,1536],[30,1300]],
+ lR:[[560,1160],[900,1150],[1010,1330],[1020,1536],[560,1536],[540,1300]]},
+ PV={head:[560,690],aL:[330,770],aR:[850,740],lL:[330,1150],lR:[740,1170]};
+const pp=pl=>{ctx.moveTo(pl[0][0],pl[0][1]);for(let i=1;i<pl.length;i++)ctx.lineTo(pl[i][0],pl[i][1]);ctx.closePath()};
+function oursonRig(x,A,k){if(!OURS.complete||!OURS.naturalWidth)return;ell(x,FY,95,12,'rgba(0,0,0,.2)');
+ ctx.save();ctx.translate(x,FY-A.b);ctx.rotate(A.sway);ctx.scale(k/A.sq,k*A.sq);ctx.translate(-512,-1536);
+ ctx.fillStyle='#cf8c46';ctx.beginPath();Object.values(PL).forEach(pp);ctx.fill();
+ ctx.save();ctx.beginPath();ctx.rect(-50,-50,1124,1636);Object.values(PL).forEach(pp);ctx.clip('evenodd');ctx.drawImage(OURS,0,0,1024,1536);ctx.restore();
+ ['lL','lR','head','aL','aR'].forEach(n=>{const v=PV[n];ctx.save();ctx.translate(v[0],v[1]);ctx.rotate(A[n]);ctx.translate(-v[0],-v[1]);ctx.beginPath();pp(PL[n]);ctx.clip();ctx.drawImage(OURS,0,0,1024,1536);ctx.restore()});
+ ctx.restore()}
+function kick(){try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();AC.resume();const o=AC.createOscillator(),g=AC.createGain(),t=AC.currentTime;o.frequency.setValueAtTime(150,t);o.frequency.exponentialRampToValueAtTime(45,t+.15);g.gain.setValueAtTime(.5,t);g.gain.exponentialRampToValueAtTime(.001,t+.2);o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+.22)}catch(e){}}
+const DML={tom:['Tom','garçon'],lea:['Léa','fille'],chat:['Mimi','chat'],chien:['Max','chien'],papa:['Papa','homme']};
+let dRaf=0,dModel=null,AN=null,dDemo=false,dph=0,lvl=0,pulse=0,avg=0,tPrev=0,lastK=0,buf=null;
+function danceLoop(now){const dt=Math.min(.05,(now-tPrev)/1000),t=now/1000,pl=$('player');tPrev=now;let e=0;
+ if(AN&&!pl.paused&&!pl.ended){buf=buf||new Uint8Array(AN.frequencyBinCount);AN.getByteFrequencyData(buf);let b=0,m=0;for(let i=1;i<8;i++)b+=buf[i];for(let i=8;i<40;i++)m+=buf[i];b/=1785;m/=8160;e=Math.min(1,b*.8+m*.9);if(b>avg*1.2+.06&&now-lastK>220){pulse=1;lastK=now}avg=avg*.94+b*.06}
+ else if(dDemo){e=.6;if(now-lastK>500){pulse=1;lastK=now;kick()}}
+ lvl+=(e-lvl)*.15;pulse=Math.max(0,pulse-dt*4);dph+=dt*(3+lvl*9);
+ decor('campagne',t);const a=.4+lvl,s1=Math.sin(dph),b=pulse*38+lvl*14;
+ if(dModel==='ourson')oursonRig(W/2,{b,sway:Math.sin(dph*.5)*.07*a,sq:1+pulse*.07,head:Math.sin(dph*.5+1)*.12*a,aL:s1*.45*a-pulse*.2,aR:-(.2+.5*Math.abs(Math.sin(dph+1))*a),lL:s1*.12*a,lR:-s1*.12*a},.27);
+ else{const[nm,ty]=DML[dModel],c={type:ty,opts:[]},s={x:W/2,face:1,moving:lvl>.1,jump:b*.8,ph:dph,pedal:0,wheel:0,t,bike:false,wave:lvl>.12,talk:pulse>.5,fur:furOf(nm,c)};
+  ctx.save();ctx.translate(W/2,FY);ctx.scale(1.5,1.5);ctx.translate(-W/2,-FY);if(ty==='chat')cat(s);else if(ty==='chien')dog(s);else person(mkLook(nm,c),s);ctx.restore()}
+ if(lvl>.12){ctx.save();ctx.font='700 40px system-ui,Arial';ctx.textAlign='center';for(let i=0;i<3;i++){const k=(t*.6+i/3)%1;ctx.globalAlpha=1-k;ctx.fillStyle=['#ff4f9a','#ffb100','#7c5cff'][i];ctx.fillText(i%2?'♫':'♪',W/2+(i-1)*190+Math.sin(t*3+i)*14,FY-260-k*130)}ctx.restore()}
+ $('status').textContent='💃 Danse'+(AN&&!pl.paused?' — au rythme de votre audio':dDemo?' — rythme démo':' — en attente d\'un audio');
+ dRaf=requestAnimationFrame(danceLoop)}
+function startDance(m){cancelAnimationFrame(raf);cancelAnimationFrame(dRaf);dModel=m;tPrev=performance.now();dRaf=requestAnimationFrame(danceLoop)}
+document.querySelectorAll('#models button').forEach(b=>b.onclick=()=>startDance(b.dataset.m));
+$('bDemo').onclick=()=>{$('player').pause();dDemo=true;if(!dModel)startDance('ourson')};
+$('bStop').onclick=()=>{cancelAnimationFrame(dRaf);dModel=null;dDemo=false;$('player').pause();const p=parse($('src').value);if(p.scenes.length)frame(1,p.scenes);$('status').textContent='Prêt.'};
+$('aud').onchange=e=>{const f=e.target.files[0];if(!f)return;const p=$('player');p.src=URL.createObjectURL(f);p.style.display='block';dDemo=false;
+ AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(!AN){AN=AC.createAnalyser();AN.fftSize=256;AC.createMediaElementSource(p).connect(AN);AN.connect(AC.destination)}
+ p.onplay=()=>AC.resume();if(!dModel)startDance('ourson');p.play().catch(()=>{})};
 $('bPrev').onclick=()=>run(false);$('bFix').onclick=fix;$('bRec').onclick=()=>{$('out').style.display='none';$('dl').style.display='none';run(true)};
 $('src').addEventListener('input',()=>{const{errs}=parse($('src').value);$('err').textContent=errs.join('\n')});
 try{const p=parse($('src').value);$('err').textContent=p.errs.join('\n');frame(3,p.scenes)}catch(e){$('status').textContent='Erreur : '+e.message}
