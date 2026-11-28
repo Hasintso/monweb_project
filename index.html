@@ -49,7 +49,9 @@ code{background:#0f1220;padding:1px 5px;border-radius:4px}
 3. <b>Décor</b> : campagne · plage/mer · nuit/soir/lune · ville/magasin/route/matin. Un nouveau décor ouvre une nouvelle scène.<br>
 4. <b>Actions</b> : aller, se rendre, marcher, courir, partir, arriver → il marche · sauter, être content → il saute · saluer, coucou → il salue · vélo/bicyclette → il est à vélo.<br>
 5. <b>Paroles</b> entre guillemets : Léa dit "Bonjour !"<br>
-6. Cliquez sur 🪄 <b>Transformer en script</b>, relisez le script, corrigez si besoin, puis ▶ Lecture. Une phrase non dessinable apparaît en commentaire (#) dans le script.</details>
+6. Cliquez sur 🪄 <b>Transformer en script</b>, relisez le script, corrigez si besoin, puis ▶ Lecture. Une phrase non dessinable apparaît en commentaire (#) dans le script.<br>
+7. 🧸 <b>Ourson</b> : écrivez « l'ourson Teddy » (ou nounours, peluche). Il danse (« Teddy dansait ») et chante (« Teddy chantait "La la la !" » → bulle ♪ + mélodie). Dans le script : <code>perso Teddy ourson 500</code>, <code>Teddy danse</code>, <code>Teddy chante "La la la !"</code>. Tout personnage peut aussi danser.<br>
+⚠️ L'image <code>ourson.png</code> doit être dans le même dossier que ce fichier. La mélodie s'entend en lecture, mais n'est pas enregistrée dans la vidéo .webm.</details>
 </section>
 <section class="card"><canvas id="cv" width="1280" height="720"></canvas><div id="status">Prêt.</div><video id="out" controls></video>
 <div class="btns"><a id="dl" class="btn" style="display:none" download="dessin-anime.webm">⬇ Télécharger la vidéo</a></div></section>
@@ -83,9 +85,9 @@ titre "Fin"
 Tom dit "Quelle belle aventure !"`;
 // ---------- lecture souple du script ----------
 const nz=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
-const VERB={va:'va',aller:'va',marche:'va',court:'va',avance:'va',pedale:'va',dit:'dit',dis:'dit',parle:'dit',crie:'dit',saute:'saute',bondit:'saute',salue:'salue',coucou:'salue'};
+const VERB={va:'va',aller:'va',marche:'va',court:'va',avance:'va',pedale:'va',dit:'dit',dis:'dit',parle:'dit',crie:'dit',saute:'saute',bondit:'saute',salue:'salue',coucou:'salue',danse:'danse',danser:'danse',dansait:'danse',chante:'chante',chanter:'chante',chantait:'chante',chantent:'chante'};
 const BG={campagne:'campagne',jour:'jour',plage:'plage',mer:'plage',nuit:'nuit',soir:'nuit'};
-const TY={garcon:'garçon',gars:'garçon',garcons:'garçon',fille:'fille',chat:'chat',chatte:'chat',minou:'chat',chien:'chien',toutou:'chien',homme:'homme',monsieur:'homme',papa:'homme',pere:'homme',femme:'femme',madame:'femme',maman:'femme',mere:'femme',vieux:'vieux',papi:'vieux',vieille:'vieille',mamie:'vieille',bebe:'bebe'};
+const TY={garcon:'garçon',gars:'garçon',garcons:'garçon',fille:'fille',chat:'chat',chatte:'chat',minou:'chat',chien:'chien',toutou:'chien',homme:'homme',monsieur:'homme',papa:'homme',pere:'homme',femme:'femme',madame:'femme',maman:'femme',mere:'femme',vieux:'vieux',papi:'vieux',vieille:'vieille',mamie:'vieille',bebe:'bebe',ourson:'ourson',nounours:'ourson',peluche:'ourson'};
 const unq=s=>s.trim().replace(/^["']+|["']+$/g,'').trim();
 function parse(src){const scenes=[],errs=[];let sc=null,m,cur=0;
  src=src.replace(/[«“”„»]/g,'"').replace(/[’‘]/g,"'").replace(/\u00a0/g,' ');
@@ -98,7 +100,7 @@ function parse(src){const scenes=[],errs=[];let sc=null,m,cur=0;
    sc.ch[m[1]]={type:t,x:Math.max(0,Math.min(1000,m[3]===undefined?500:+m[3])),bike:/v[eé]lo/i.test(m[4]),opts:nz(m[4]).split(/\s+/).filter(w=>w&&!/^(velo|bicyclette)$/.test(w))};sc.k[nz(m[1])]=m[1];return}
   let a=cur,b=null,rest=l;
   if(m=l.match(/^(\d+(?:[.,]\d+)?)\s*s?\s*(?:-|–|—|à|a|->)\s*(\d+(?:[.,]\d+)?)\s*s?\s+(.+)$/i)){a=+m[1].replace(',','.');b=+m[2].replace(',','.');rest=m[3]}
-  const add=(who,act,arg)=>{if(b===null){b=a+(act==='dit'?Math.max(2.5,arg.length*.09+1):act==='va'?3:act==='titre'?3:act==='salue'?2:1)}sc.ev.push({a,b,who,act,arg});cur=Math.max(cur,b)};
+  const add=(who,act,arg)=>{if(b===null){b=a+(act==='dit'?Math.max(2.5,arg.length*.09+1):act==='chante'?Math.max(4,arg.length*.14+1):act==='danse'?5:act==='va'?3:act==='titre'?3:act==='salue'?2:1)}sc.ev.push({a,b,who,act,arg});cur=Math.max(cur,b)};
   if(m=rest.match(/^titre\s*:?\s*(.*)$/i)){add('*','titre',unq(m[1]));return}
   let who,verb,arg;
   if(m=rest.match(/^([^\s:]+)\s*:\s*(.+)$/)){who=m[1];verb='dit';arg=m[2]}
@@ -110,10 +112,10 @@ function parse(src){const scenes=[],errs=[];let sc=null,m,cur=0;
  closeScene();return{scenes,errs}}
 function fix(){const{scenes}=parse($('src').value),r=x=>+x.toFixed(1);
  $('src').value=scenes.map(s=>['scene '+s.bg+' '+r(s.dur),...Object.entries(s.ch).map(([n,c])=>`perso ${n} ${c.type} ${c.x}${c.bike?' velo':''}${(c.opts||[]).map(w=>' '+w).join('')}`),
-  ...s.ev.map(e=>`${r(e.a)}-${r(e.b)} `+(e.act==='titre'?`titre "${e.arg}"`:e.act==='dit'?`${e.who} dit "${e.arg}"`:e.act==='va'?`${e.who} va ${e.arg}`:`${e.who} ${e.act}`))].join('\n')).join('\n---\n');run(false,true)}
+  ...s.ev.map(e=>`${r(e.a)}-${r(e.b)} `+(e.act==='titre'?`titre "${e.arg}"`:(e.act==='dit'||e.act==='chante')?`${e.who} ${e.act} "${e.arg}"`:e.act==='va'?`${e.who} va ${e.arg}`:`${e.who} ${e.act}`))].join('\n')).join('\n---\n');run(false,true)}
 // ---------- histoire libre → script ----------
 const STOP='le la les un une il elle ils elles sa son ses mon ma mes ce cette puis ensuite alors mais et dans au aux a quand apres avant soudain enfin plus pendant comme ou donc or ni car y en sur sous chez pour avec sans nous vous je tu on des du de lendemain matin soir nuit quelle quel que qui ici voila c il'.split(' ');
-const ROLES=[[/grand-?mere|mamie/,'Mamie','vieille'],[/grand-?pere|papi/,'Papi','vieux'],[/\bmere\b|maman/,'Maman','femme'],[/\bpere\b|papa/,'Papa','homme'],[/\bbebe\b/,'Bébé','bebe'],[/maitresse|institutrice|infirmiere|voisine|\breine\b|vendeuse|boulangere/,'Madame','femme'],[/instituteur|docteur|medecin|voisin\b|\broi\b|policier|pompier|fermier|vendeur|boulanger\b|marchand/,'Monsieur','homme'],[/\bgarcon\b|\bfils\b|\bfrere\b/,'Garçon','garçon'],[/\bfille\b|\bfillette\b|\bsoeur\b/,'Fille','fille'],[/\bchat(te)?\b|minou/,'Minou','chat'],[/\bchien(ne)?\b|toutou/,'Toutou','chien']];
+const ROLES=[[/ourson|nounours|peluche/,'Ourson','ourson'],[/grand-?mere|mamie/,'Mamie','vieille'],[/grand-?pere|papi/,'Papi','vieux'],[/\bmere\b|maman/,'Maman','femme'],[/\bpere\b|papa/,'Papa','homme'],[/\bbebe\b/,'Bébé','bebe'],[/maitresse|institutrice|infirmiere|voisine|\breine\b|vendeuse|boulangere/,'Madame','femme'],[/instituteur|docteur|medecin|voisin\b|\broi\b|policier|pompier|fermier|vendeur|boulanger\b|marchand/,'Monsieur','homme'],[/\bgarcon\b|\bfils\b|\bfrere\b/,'Garçon','garçon'],[/\bfille\b|\bfillette\b|\bsoeur\b/,'Fille','fille'],[/\bchat(te)?\b|minou/,'Minou','chat'],[/\bchien(ne)?\b|toutou/,'Toutou','chien']];
 const BGW=[[/nuit|soir|etoile|lune|dormir/,'nuit'],[/plage|\bmer\b|ocean|sable/,'plage'],[/campagne|champ|ferme|village|foret/,'campagne'],[/ville|magasin|route|rue|ecole|jour|matin|marche\b/,'jour']];
 function story2script(txt){
  txt=txt.replace(/[«“”„»]/g,'"').replace(/"([^"]*)"/g,(m,q)=>'"'+q.replace(/!/g,'§1').replace(/\?/g,'§2').replace(/\./g,'§3')+'"');
@@ -125,7 +127,7 @@ function story2script(txt){
   if(!sc||(bg&&bg!==sc.bg)){sc={bg:bg||'campagne',ch:{},ev:[]};scenes.push(sc)}
   const found=[];let w=o;ROLES.forEach(([r,name,type])=>{const m=w.match(r);if(m){found.push({i:m.index,name,type});w=w.replace(r,x=>' '.repeat(x.length))}});
   (out.match(/(^|\s)[A-ZÉÈÀÂÊÎÔÛÇ][a-zéèàâêîôûçïë]+/g)||[]).forEach(m=>{const nm=m.trim();if(STOP.includes(nz(nm)))return;found.push({i:out.indexOf(nm),name:nm,type:/(a|e|ie|ine|elle|ette)$/i.test(nm)?'fille':'garçon',cap:1})});
-  const ci=found.findIndex(c=>(c.name==='Minou'||c.name==='Toutou')&&!c.cap);if(ci>=0){const nm=found.filter(c=>c.cap).sort((a,b)=>Math.abs(a.i-found[ci].i)-Math.abs(b.i-found[ci].i))[0];if(nm&&Math.abs(nm.i-found[ci].i)<14){nm.type=found[ci].type;found.splice(ci,1)}}
+  const ci=found.findIndex(c=>(c.name==='Minou'||c.name==='Toutou'||c.name==='Ourson')&&!c.cap);if(ci>=0){const nm=found.filter(c=>c.cap).sort((a,b)=>Math.abs(a.i-found[ci].i)-Math.abs(b.i-found[ci].i))[0];if(nm&&Math.abs(nm.i-found[ci].i)<14){nm.type=found[ci].type;found.splice(ci,1)}}
   found.sort((a,b)=>a.i-b.i);const seen=new Set(),list=found.filter(c=>!seen.has(c.name)&&seen.add(c.name));
   list.forEach(c=>{c.type=tp[c.name]||c.type;tp[c.name]=c.type});
   let subj=list[0]||null;if(!subj&&/\b(il|elle)\b/.test(o)&&last)subj=last;if(subj)last=subj;
@@ -134,11 +136,12 @@ function story2script(txt){
   if(subj)[[/rouss|\broux/,'roux'],[/blond/,'blond'],[/\bbrun/,'brun'],[/\bnoir/,'noir'],[/\bgris/,'gris'],[/lunette/,'lunettes'],[/barbe|moustache/,'barbe'],[/rouge/,'rouge'],[/\bbleu/,'bleu'],[/\bvert/,'vert'],[/jaune/,'jaune'],[/violet/,'violet'],[/\brose\b/,'rose'],[/orange/,'orange']].forEach(([r,w])=>{if(r.test(o))(OPS[subj.name]=OPS[subj.name]||new Set()).add(w)});
   let did=false;const ev=l=>{sc.ev.push(l);did=true};
   if(subj){const N=subj.name;
+   if(/dans/.test(o))ev(N+' danse');if(/chant/.test(o)&&!q)ev(N+' chante');
    if(/salu|coucou|fait signe/.test(o))ev(N+' salue');
    if(/saut|bond|joyeu|heureu|content/.test(o))ev(N+' saute');
    if(/rendre|rendait|aller|allait|\bva\b|\bvont\b|alla\b|march|cour|pedal|partir|partait|rejoin|avanc|dirig|arriv/.test(o)){const c=pos[N],t=c<500?Math.min(900,c+450):Math.max(100,c-450);pos[N]=t;ev(N+' va '+t)}}
-  if(q){let who=subj;if(!who&&spk){const ot=Object.keys(sc.ch).filter(k=>k!==spk.name);who=ot.length?{name:ot[0]}:spk}
-   if(who){ev(who.name+' dit "'+q+'"');spk=who}else ev('titre "'+q+'"')}
+  if(q){const sing=/chant/.test(o);let who=subj;if(!who&&spk){const ot=Object.keys(sc.ch).filter(k=>k!==spk.name);who=ot.length?{name:ot[0]}:spk}
+   if(who){ev(who.name+(sing?' chante "':' dit "')+q+'"');spk=who}else ev('titre "'+q+'"')}
   if(!did)sc.ev.push('# (phrase non dessinée : '+back(raw).slice(0,70)+')')});
  return scenes.map(s=>['scene '+s.bg,...Object.entries(s.ch).map(([k,c])=>`perso ${k} ${c.type} ${c.x}${c.bike?' velo':''}${[...(OPS[k]||[])].map(w=>' '+w).join('')}`),...s.ev].join('\n')).join('\n---\n')}
 $('bStory').onclick=()=>{const t=$('story').value.trim();if(!t){$('status').textContent='Écrivez d\'abord votre histoire dans la case du haut.';return}
@@ -174,7 +177,7 @@ function decor(n,t){const night=n==='nuit',sk=SKY[n]||SKY.jour,g=ctx.createLinea
  else for(let i=0;i<14;i++){const x=(i*271+Math.sin(t+i)*30)%W,y=GY-20+Math.sin(t*1.3+i*2)*40+(i%4)*30;ctx.globalAlpha=.5+.5*Math.sin(t*3+i);circ(x,y,9,'rgba(220,255,120,.25)');circ(x,y,3,'#f4ff9a');ctx.globalAlpha=1}}
 // ---------- personnages ----------
 const LOOK={garçon:{skin:'#ffd2a8',hair:'#3b2a20',shirt:'#e74c3c',pants:'#2c3e8f',shoe:'#fff'},fille:{skin:'#ffd9b8',hair:'#a85a22',shirt:'#f06ab0',pants:'#8e44ad',long:1,shoe:'#ffd23a'}};
-const hs=s=>[...s].reduce((a,c)=>(a*31+c.charCodeAt(0))>>>0,7),KS={homme:1.12,femme:1.1,bebe:.62,vieux:1.02,vieille:1};
+const hs=s=>[...s].reduce((a,c)=>(a*31+c.charCodeAt(0))>>>0,7),KS={homme:1.12,femme:1.1,bebe:.62,vieux:1.02,vieille:1,ourson:1.2};
 const SKINS=['#ffd2a8','#f1b98a','#d99a6c','#a86b45','#6f4630'],HAIRS=['#3b2a20','#8a4b1f','#e3b448','#c1561f','#1e1e24','#5a3a22'],SHIRTS=['#e74c3c','#3b82f6','#2fa84f','#f4c430','#8e44ad','#f06ab0','#f39c3d','#14b8a6'],PANTS=['#2c3e8f','#3a3a4a','#5b4636','#1f6f5c','#8e44ad'];
 const OPC={rouge:'#e74c3c',bleu:'#3b82f6',vert:'#2fa84f',jaune:'#f4c430',violet:'#8e44ad',rose:'#f06ab0',orange:'#f39c3d',blanc:'#f2f2f2',marron:'#8a5a2b'},OPH={roux:'#c1561f',rousse:'#c1561f',blond:'#e3b448',blonde:'#e3b448',brun:'#4a2f1d',brune:'#4a2f1d',noir:'#1e1e24',noire:'#1e1e24',gris:'#c9c9d2',grise:'#c9c9d2'};
 const FURS={orange:['#f39c3d','#c9701a'],roux:['#f39c3d','#c9701a'],noir:['#3a3a46','#1a1a22'],gris:['#9aa0aa','#6d7380'],blanc:['#f2f2f2','#c9c9d2'],brun:['#8a5a2b','#5e3b1a'],marron:['#8a5a2b','#5e3b1a'],jaune:['#e8c050','#b8902a'],blond:['#e8c050','#b8902a']},FK=['orange','gris','brun','noir','blanc','jaune'];
@@ -188,6 +191,17 @@ function dog(s){ctx.save();ctx.translate(s.x,FY-s.jump);ctx.scale(s.face*1.15,1.
  oell(44,-66,22,20,C);oell(64,-58,16,11,'#ffe9c7');circ(76,-62,5,O);oell(34,-60,9,20,D,.35);
  if(bl)line([46,-72],[56,-72],O,3);else{ell(52,-72,6,7.5,'#fff');circ(53,-72,3.5,O);circ(54,-74,1.4,'#fff')}
  if(s.talk)ell(66,-50,6,2+Math.abs(Math.sin(s.t*14))*5,'#7a1f2b');else ell(66,-47,5,7,'#ff7b93');ctx.restore()}
+const FIRED=new Set(),OURS=new Image();let LIVE=false,AC=null;OURS.src='ourson.png';
+function ourson(s){ctx.save();ctx.translate(s.x,FY-s.jump);ell(0,s.jump,75,10,'rgba(0,0,0,.2)');
+ if(!OURS.complete||!OURS.naturalWidth){ctx.restore();return}
+ const H0=330,Wd=H0*OURS.naturalWidth/OURS.naturalHeight,f=Wd/1024,g=H0/1536,dn=s.dance,
+  tilt=dn?Math.sin(s.t*6)*.16:(s.moving?Math.sin(s.ph)*.06:0)+Math.sin(s.t*2)*.015,sq=dn?1+Math.sin(s.t*12)*.05:1+Math.sin(s.t*2.5)*.012;
+ ctx.scale(s.face,1);ctx.rotate(tilt);ctx.scale(1/sq,sq);ctx.drawImage(OURS,-Wd/2,-H0,Wd,H0);
+ if(s.talk){const mx=(580/1024-.5)*Wd,my=-H0+525*g,ry=(12+Math.abs(Math.sin(s.t*12))*30)*g;ell(mx,my,56*f,ry,'#6b1d2a');ell(mx,my+ry*.45,30*f,ry*.45,'#ff8fa3')}
+ ctx.restore();
+ if(s.talk||dn){ctx.save();ctx.font='700 40px system-ui,Arial';ctx.textAlign='center';for(let i=0;i<3;i++){const k=(s.t*.5+i/3)%1;ctx.globalAlpha=1-k;ctx.fillStyle=['#ff4f9a','#ffb100','#7c5cff'][i];ctx.fillText(i%2?'♫':'♪',s.x+(i-1)*95+Math.sin(s.t*3+i)*14,FY-H0*.75-k*130)}ctx.restore()}}
+function sing(d){try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();AC.resume();const N=[523,587,659,784,880,784,659,587,523,659,784,659],T=d.arg||'la la la la',n=Math.max(4,Math.min(32,Math.round(T.length/2.2))),dt=(d.b-d.a)/n,t0=AC.currentTime+.05,sh=(T.length*7)%5;
+ for(let i=0;i<n;i++){const o=AC.createOscillator(),g=AC.createGain(),t=t0+i*dt;o.type='triangle';o.frequency.value=N[(i+sh)%N.length]*(i%8===7?.5:1);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.18,t+.03);g.gain.exponentialRampToValueAtTime(.001,t+dt*.95);o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+dt)}}catch(e){}}
 function head(L,x,y,s){const bl=(s.t%3.5)<.14;
  if(L.long){oell(x-26,y+22,20,40,L.hair,.15)}
  oell(x-33,y+4,8,10,L.skin);ocirc(x,y,37,L.skin);
@@ -231,22 +245,23 @@ function frame(t,scenes){let acc=0,sc=scenes[scenes.length-1],lt=0;for(const s o
  decor(sc.bg,t);const bub=[];
  for(const [name,c] of Object.entries(sc.ch)){let cur=c.x,x=c.x,face=1,moving=false;
   for(const e of sc.ev.filter(e=>e.who===name&&e.act==='va').sort((p,q)=>p.a-q.a)){const tx=+e.arg;if(lt<e.a)break;face=tx>=cur?1:-1;if(lt>=e.b){x=cur=tx;continue}x=cur+(tx-cur)*(lt-e.a)/(e.b-e.a);moving=true;break}
-  const act=a=>sc.ev.find(e=>e.who===name&&e.act===a&&lt>=e.a&&lt<e.b),px=x*1.28,jp=act('saute'),jump=jp?Math.sin(Math.PI*(lt-jp.a)/(jp.b-jp.a))*80:0,d=act('dit');
-  const s={x:px,face,moving,jump,ph:px*.07,pedal:px*.06,wheel:px/38,t:lt,bike:c.bike,wave:!!act('salue'),talk:!!d};
-  s.fur=furOf(name,c);if(c.type==='chat')cat(s);else if(c.type==='chien')dog(s);else person(mkLook(name,c),s);
-  if(d)bub.push([d.arg,px,FY-((c.type==='chat'||c.type==='chien')?140:285*(KS[c.type]||1))-jump,Math.min(1,(lt-d.a)/.25,(d.b-lt)/.25)])}
+  const act=a=>sc.ev.find(e=>e.who===name&&e.act===a&&lt>=e.a&&lt<e.b),px=x*1.28,jp=act('saute'),jump=(jp?Math.sin(Math.PI*(lt-jp.a)/(jp.b-jp.a))*80:0)+(act('danse')?Math.abs(Math.sin(lt*7))*28:0),d=act('dit')||act('chante');
+  const s={x:px,face,moving,jump,ph:px*.07,pedal:px*.06,wheel:px/38,t:lt,bike:c.bike,wave:!!(act('salue')||act('danse')),dance:!!act('danse'),talk:!!d};
+  s.fur=furOf(name,c);if(d&&d.act==='chante'&&LIVE&&!FIRED.has(d)){FIRED.add(d);sing(d)}
+  if(c.type==='ourson')ourson(s);else if(c.type==='chat')cat(s);else if(c.type==='chien')dog(s);else person(mkLook(name,c),s);
+  if(d)bub.push([(d.act==='chante'?'♪ ':'')+d.arg,px,FY-((c.type==='chat'||c.type==='chien')?140:285*(KS[c.type]||1))-jump,Math.min(1,(lt-d.a)/.25,(d.b-lt)/.25)])}
  bub.forEach(b=>bubble(...b));
  sc.ev.filter(e=>e.act==='titre'&&lt>=e.a&&lt<e.b).forEach(e=>{ctx.save();ctx.globalAlpha=Math.min(1,(lt-e.a)/.4,(e.b-lt)/.4);ctx.font='800 76px system-ui,Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineWidth=14;ctx.strokeStyle='#2b2b5e';ctx.lineJoin='round';ctx.strokeText(e.arg,W/2,150);ctx.fillStyle='#ffe15a';ctx.fillText(e.arg,W/2,146);ctx.fillStyle='#fff';ctx.fillText(e.arg,W/2,150);ctx.restore()});
  const f=Math.max(0,Math.min(1,lt/.4,(sc.dur-lt)/.4));ctx.fillStyle='rgba(0,0,0,'+(1-f)+')';ctx.fillRect(0,0,W,H)}
 let raf=0;
 function run(rec,still){const{scenes,errs}=parse($('src').value);$('err').textContent=errs.join('\n');if(!scenes.length){$('status').textContent='Aucune scène.';return}
- cancelAnimationFrame(raf);if(still){frame(1,scenes);$('status').textContent='Écriture corrigée ✔';return}
+ cancelAnimationFrame(raf);FIRED.clear();LIVE=!still;if(still){frame(1,scenes);$('status').textContent='Écriture corrigée ✔';return}
  const total=scenes.reduce((a,s)=>a+s.dur,0);let mr,ch=[];
  if(rec){if(!window.MediaRecorder){$('status').textContent='Utilisez Chrome, Edge ou Firefox.';return}
   const mime=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'].find(m=>MediaRecorder.isTypeSupported(m));mr=new MediaRecorder(cv.captureStream(30),{mimeType:mime,videoBitsPerSecond:6e6});
   mr.ondataavailable=e=>e.data.size&&ch.push(e.data);mr.onstop=()=>{const u=URL.createObjectURL(new Blob(ch,{type:'video/webm'}));$('out').src=u;$('out').style.display='block';$('dl').href=u;$('dl').style.display='inline-block';$('status').textContent='Vidéo prête ✔'};mr.start()}
  $('bPrev').disabled=$('bRec').disabled=true;const t0=performance.now();
- (function loop(now){try{const t=Math.max(0,(now-t0)/1000);if(t>=total){frame(total-.01,scenes);if(mr)setTimeout(()=>mr.stop(),150);$('bPrev').disabled=$('bRec').disabled=false;if(!rec)$('status').textContent='Terminé.';return}
+ (function loop(now){try{const t=Math.max(0,(now-t0)/1000);if(t>=total){LIVE=false;frame(total-.01,scenes);if(mr)setTimeout(()=>mr.stop(),150);$('bPrev').disabled=$('bRec').disabled=false;if(!rec)$('status').textContent='Terminé.';return}
   frame(t,scenes);$('status').textContent=(rec?'Enregistrement… ':'Lecture… ')+Math.ceil(total-t)+' s';raf=requestAnimationFrame(loop)}
   catch(e){$('status').textContent='Erreur : '+e.message;$('bPrev').disabled=$('bRec').disabled=false}})(t0)}
 $('bPrev').onclick=()=>run(false);$('bFix').onclick=fix;$('bRec').onclick=()=>{$('out').style.display='none';$('dl').style.display='none';run(true)};
