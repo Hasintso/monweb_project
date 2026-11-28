@@ -28,6 +28,10 @@ code{background:#0f1220;padding:1px 5px;border-radius:4px}
 <header><h1>🎨 Studio Dessin Animé</h1><p>Écrivez votre histoire ci-dessous : le studio la lit tout seul (accents, guillemets, majuscules, temps… tout est accepté) et la dessine.</p></header>
 <main>
 <section class="card">
+<div style="font-size:13px;margin-bottom:6px">✍️ <b>Votre histoire</b> (phrases normales)</div>
+<textarea id="story" style="height:120px;font-family:inherit" placeholder="Ex : Sa mère était à la campagne. Elle voulait aller au magasin. Elle dit &quot;Je pars acheter du pain !&quot;"></textarea>
+<div class="btns" style="margin:8px 0 14px"><button id="bStory">🪄 Transformer en script</button></div>
+<div style="font-size:13px;margin-bottom:6px">🎬 <b>Script</b> (créé automatiquement, vous pouvez le modifier)</div>
 <textarea id="src" spellcheck="false"></textarea>
 <div id="err"></div>
 <div class="btns"><button id="bPrev">▶ Lecture</button><button id="bFix" class="sec">✨ Corriger l'écriture</button><button id="bRec" class="sec">⏺ Exporter (.webm)</button></div>
@@ -38,6 +42,13 @@ code{background:#0f1220;padding:1px 5px;border-radius:4px}
 <code>Tom va 600</code> · <code>Tom dit "Bonjour !"</code> · <code>Tom : Bonjour !</code> · <code>Mimi saute</code> · <code>Léa salue</code> · <code>titre "Mon titre"</code><br>
 <b>Avec temps</b> (facultatif) : <code>2-5 Tom dit "Salut"</code> ou <code>2 à 5 Tom dit "Salut"</code><br>
 <code>---</code> sépare les scènes. Le bouton « Corriger » remet tout au propre.</details>
+<details open><summary>✍️ Comment écrire votre histoire libre</summary>
+1. Écrivez des phrases normales, <b>une idée par phrase</b> : « Tom était à la campagne. Il voulait aller à la plage. »<br>
+2. <b>Prénoms avec une majuscule</b> (Tom, Léa). Pour un animal : « le chat Mimi ». Rôles reconnus : la mère/maman, le père/papa, grand-mère, grand-père, le garçon, la fille, le chat.<br>
+3. <b>Décor</b> : campagne · plage/mer · nuit/soir/lune · ville/magasin/route/matin. Un nouveau décor ouvre une nouvelle scène.<br>
+4. <b>Actions</b> : aller, se rendre, marcher, courir, partir, arriver → il marche · sauter, être content → il saute · saluer, coucou → il salue · vélo/bicyclette → il est à vélo.<br>
+5. <b>Paroles</b> entre guillemets : Léa dit "Bonjour !"<br>
+6. Cliquez sur 🪄 <b>Transformer en script</b>, relisez le script, corrigez si besoin, puis ▶ Lecture. Une phrase non dessinable apparaît en commentaire (#) dans le script.</details>
 </section>
 <section class="card"><canvas id="cv" width="1280" height="720"></canvas><div id="status">Prêt.</div><video id="out" controls></video>
 <div class="btns"><a id="dl" class="btn" style="display:none" download="dessin-anime.webm">⬇ Télécharger la vidéo</a></div></section>
@@ -99,6 +110,37 @@ function parse(src){const scenes=[],errs=[];let sc=null,m,cur=0;
 function fix(){const{scenes}=parse($('src').value),r=x=>+x.toFixed(1);
  $('src').value=scenes.map(s=>['scene '+s.bg+' '+r(s.dur),...Object.entries(s.ch).map(([n,c])=>`perso ${n} ${c.type} ${c.x}${c.bike?' velo':''}`),
   ...s.ev.map(e=>`${r(e.a)}-${r(e.b)} `+(e.act==='titre'?`titre "${e.arg}"`:e.act==='dit'?`${e.who} dit "${e.arg}"`:e.act==='va'?`${e.who} va ${e.arg}`:`${e.who} ${e.act}`))].join('\n')).join('\n---\n');run(false,true)}
+// ---------- histoire libre → script ----------
+const STOP='le la les un une il elle ils elles sa son ses mon ma mes ce cette puis ensuite alors mais et dans au aux a quand apres avant soudain enfin plus pendant comme ou donc or ni car y en sur sous chez pour avec sans nous vous je tu on des du de lendemain matin soir nuit quelle quel que qui ici voila c il'.split(' ');
+const ROLES=[[/grand-?mere|mamie/,'Mamie','fille'],[/grand-?pere|papi/,'Papi','garçon'],[/\bmere\b|maman/,'Maman','fille'],[/\bpere\b|papa/,'Papa','garçon'],[/\bgarcon\b|\bfils\b/,'Garçon','garçon'],[/\bfille\b|\bfillette\b/,'Fille','fille'],[/\bchat(te)?\b|minou|\bchien\b/,'Minou','chat']];
+const BGW=[[/nuit|soir|etoile|lune|dormir/,'nuit'],[/plage|\bmer\b|ocean|sable/,'plage'],[/campagne|champ|ferme|village|foret/,'campagne'],[/ville|magasin|route|rue|ecole|jour|matin|marche\b/,'jour']];
+function story2script(txt){
+ txt=txt.replace(/[«“”„»]/g,'"').replace(/"([^"]*)"/g,(m,q)=>'"'+q.replace(/!/g,'§1').replace(/\?/g,'§2').replace(/\./g,'§3')+'"');
+ const back=s=>s.replace(/§1/g,'!').replace(/§2/g,'?').replace(/§3/g,'.'),sents=txt.split(/(?<=[.!?])\s+|\n+/).map(s=>s.trim()).filter(Boolean);
+ const pos={},tp={},scenes=[];let sc=null,last=null,spk=null,n=0;
+ const use=c=>{if(!sc.ch[c.name]){if(pos[c.name]===undefined)pos[c.name]=120+(n++%4)*230;sc.ch[c.name]={type:c.type,x:pos[c.name],bike:false}}};
+ sents.forEach(raw=>{const qm=raw.match(/"([^"]*)"/),q=qm?back(qm[1]).trim():null,out=raw.replace(/"[^"]*"/g,' '),o=nz(out);
+  let bg=null;for(const[r,b]of BGW)if(r.test(o)){bg=b;break}
+  if(!sc||(bg&&bg!==sc.bg)){sc={bg:bg||'campagne',ch:{},ev:[]};scenes.push(sc)}
+  const found=[];let w=o;ROLES.forEach(([r,name,type])=>{const m=w.match(r);if(m){found.push({i:m.index,name,type});w=w.replace(r,x=>' '.repeat(x.length))}});
+  (out.match(/(^|\s)[A-ZÉÈÀÂÊÎÔÛÇ][a-zéèàâêîôûçïë]+/g)||[]).forEach(m=>{const nm=m.trim();if(STOP.includes(nz(nm)))return;found.push({i:out.indexOf(nm),name:nm,type:/(a|e|ie|ine|elle|ette)$/i.test(nm)?'fille':'garçon',cap:1})});
+  const ci=found.findIndex(c=>c.name==='Minou'&&!c.cap);if(ci>=0){const nm=found.filter(c=>c.cap).sort((a,b)=>Math.abs(a.i-found[ci].i)-Math.abs(b.i-found[ci].i))[0];if(nm&&Math.abs(nm.i-found[ci].i)<14){nm.type='chat';found.splice(ci,1)}}
+  found.sort((a,b)=>a.i-b.i);const seen=new Set(),list=found.filter(c=>!seen.has(c.name)&&seen.add(c.name));
+  list.forEach(c=>{c.type=tp[c.name]||c.type;tp[c.name]=c.type});
+  let subj=list[0]||null;if(!subj&&/\b(il|elle)\b/.test(o)&&last)subj=last;if(subj)last=subj;
+  list.forEach(use);if(subj)use(subj);
+  if(subj&&/velo|bicyclette|pedal/.test(o))sc.ch[subj.name].bike=true;
+  let did=false;const ev=l=>{sc.ev.push(l);did=true};
+  if(subj){const N=subj.name;
+   if(/salu|coucou|fait signe/.test(o))ev(N+' salue');
+   if(/saut|bond|joyeu|heureu|content/.test(o))ev(N+' saute');
+   if(/rendre|rendait|aller|allait|\bva\b|\bvont\b|alla\b|march|cour|pedal|partir|partait|rejoin|avanc|dirig|arriv/.test(o)){const c=pos[N],t=c<500?Math.min(900,c+450):Math.max(100,c-450);pos[N]=t;ev(N+' va '+t)}}
+  if(q){let who=subj;if(!who&&spk){const ot=Object.keys(sc.ch).filter(k=>k!==spk.name);who=ot.length?{name:ot[0]}:spk}
+   if(who){ev(who.name+' dit "'+q+'"');spk=who}else ev('titre "'+q+'"')}
+  if(!did)sc.ev.push('# (phrase non dessinée : '+back(raw).slice(0,70)+')')});
+ return scenes.map(s=>['scene '+s.bg,...Object.entries(s.ch).map(([k,c])=>`perso ${k} ${c.type} ${c.x}${c.bike?' velo':''}`),...s.ev].join('\n')).join('\n---\n')}
+$('bStory').onclick=()=>{const t=$('story').value.trim();if(!t){$('status').textContent='Écrivez d\'abord votre histoire dans la case du haut.';return}
+ $('src').value=story2script(t);const p=parse($('src').value);$('err').textContent=p.errs.join('\n');if(p.scenes.length)frame(1,p.scenes);$('status').textContent='Script créé ✔ — vérifiez-le puis cliquez sur Lecture.'};
 // ---------- outils de dessin ----------
 const line=(a,b,c,w)=>{ctx.strokeStyle=c;ctx.lineWidth=w;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke()};
 const limb=(a,b,c,w)=>{line(a,b,O,w+6);line(a,b,c,w)};
