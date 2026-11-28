@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Studio Vidéo – sans API, sans IA</title>
+<style>
+:root{--bg:#0f1220;--card:#181c30;--txt:#eef0fa;--mut:#9aa0c0;--acc:#6c8cff;--bd:#2a2f4d}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--txt)}
+header{padding:18px 24px;border-bottom:1px solid var(--bd)}
+header h1{margin:0;font-size:20px}
+header p{margin:4px 0 0;color:var(--mut);font-size:13px}
+main{display:grid;grid-template-columns:minmax(300px,420px) 1fr;gap:20px;padding:20px;max-width:1300px;margin:auto}
+@media(max-width:860px){main{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:16px}
+label{display:block;font-size:12px;color:var(--mut);margin:12px 0 4px}
+textarea,select,input{width:100%;background:#0f1220;color:var(--txt);border:1px solid var(--bd);border-radius:8px;padding:9px;font:inherit}
+textarea{height:300px;resize:vertical;font-family:ui-monospace,Consolas,monospace;font-size:13px;line-height:1.5}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+button,a.btn{background:var(--acc);color:#fff;border:0;border-radius:8px;padding:10px 16px;font:inherit;font-weight:600;cursor:pointer;text-decoration:none;display:inline-block}
+button.sec{background:#2a2f4d}
+button:disabled{opacity:.5;cursor:not-allowed}
+.btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+canvas{width:100%;max-height:70vh;object-fit:contain;background:#000;border-radius:10px;display:block;margin:auto}
+#status{color:var(--mut);font-size:13px;margin:10px 0}
+video{width:100%;border-radius:10px;margin-top:12px;display:none}
+.hint{font-size:12px;color:var(--mut);line-height:1.5;margin-top:8px}
+</style>
+</head>
+<body>
+<header>
+  <h1>🎬 Studio Vidéo</h1>
+  <p>Écrivez un script, obtenez une vidéo. 100 % local : aucune API, aucune IA.</p>
+</header>
+<main>
+  <section class="card">
+    <label>Script (scènes séparées par <b>---</b> ; 1re ligne = titre, suite = texte)</label>
+    <textarea id="script">Bienvenue
+Présentation de notre nouvelle offre
+---
+Le problème
+Trop d'outils, trop de temps perdu
+Des équipes qui jonglent entre 10 applications
+---
+Notre solution
+Une plateforme unique, simple et rapide
+---
+Les résultats
++40 % de productivité
+-30 % de coûts
+---
+Passez à l'action
+Contactez-nous dès aujourd'hui
+www.exemple.com</textarea>
+    <div class="row">
+      <div><label>Durée par scène (s)</label><input id="dur" type="number" min="2" max="20" value="4"></div>
+      <div><label>Format</label>
+        <select id="fmt"><option value="1280x720">16:9 – YouTube</option><option value="720x1280">9:16 – TikTok / Reels</option><option value="1080x1080">1:1 – Instagram</option></select></div>
+    </div>
+    <div class="row">
+      <div><label>Thème</label>
+        <select id="theme"><option value="0">Bleu pro</option><option value="1">Sombre élégant</option><option value="2">Corporate clair</option><option value="3">Sunset</option></select></div>
+      <div><label>Transition</label>
+        <select id="trans"><option value="slide">Glissement</option><option value="fade">Fondu</option><option value="zoom">Zoom</option></select></div>
+    </div>
+    <label>Nom / marque (en bas, optionnel)</label>
+    <input id="brand" placeholder="Ma société">
+    <div class="btns">
+      <button id="bPrev">▶ Aperçu</button>
+      <button id="bRec" class="sec">⏺ Exporter la vidéo</button>
+    </div>
+    <p class="hint">Pour un script pro : une idée par scène, titre court (≤ 5 mots), 1 à 3 lignes de texte, un appel à l'action final.</p>
+  </section>
+
+  <section class="card">
+    <canvas id="cv" width="1280" height="720"></canvas>
+    <div id="status">Prêt.</div>
+    <video id="out" controls></video>
+    <div class="btns"><a id="dl" class="btn" style="display:none" download="ma-video.webm">⬇ Télécharger la vidéo (.webm)</a></div>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const cv = $('cv'), ctx = cv.getContext('2d');
+const THEMES = [
+  {a:'#1b2a6b',b:'#0b1030',t:'#ffffff',s:'#b9c6ff',c:'#6c8cff'},
+  {a:'#222222',b:'#0a0a0a',t:'#f5f5f5',s:'#bdbdbd',c:'#d4af37'},
+  {a:'#f4f6fb',b:'#dfe5f2',t:'#14213d',s:'#4a5578',c:'#2b59ff'},
+  {a:'#ff7e5f',b:'#4b1d6e',t:'#ffffff',s:'#ffe3d6',c:'#ffd166'}
+];
+let playing = false, raf = 0;
+
+function parse(){
+  return $('script').value.split(/^\s*---\s*$/m).map(b=>{
+    const l = b.split('\n').map(x=>x.trim()).filter(Boolean);
+    return {title:l[0]||'', lines:l.slice(1)};
+  }).filter(s=>s.title);
+}
+const ease = x => 1 - Math.pow(1 - x, 3);
+
+function wrap(text, maxW){
+  const words = text.split(' '), out = []; let cur = '';
+  for(const w of words){
+    const test = cur ? cur+' '+w : w;
+    if(ctx.measureText(test).width > maxW && cur){ out.push(cur); cur = w; } else cur = test;
+  }
+  if(cur) out.push(cur);
+  return out;
+}
+
+function draw(t, scenes, dur, th, trans, brand){
+  const W = cv.width, H = cv.height, u = Math.min(W,H)/720;
+  const total = scenes.length*dur;
+  const idx = Math.min(scenes.length-1, Math.floor(t/dur));
+  const lt = t - idx*dur, sc = scenes[idx];
+  // fond
+  const g = ctx.createLinearGradient(0,0,W,H);
+  g.addColorStop(0,th.a); g.addColorStop(1,th.b);
+  ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+  // cercles animés
+  ctx.globalAlpha = .12; ctx.fillStyle = th.c;
+  for(let i=0;i<4;i++){
+    const x = W*(.2+.2*i) + Math.sin(t*.5+i)*40*u, y = H*(.3+.15*((i*2)%3)) + Math.cos(t*.4+i)*40*u;
+    ctx.beginPath(); ctx.arc(x,y,(90+i*40)*u,0,7); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  // animation d'entrée / sortie
+  const inP = ease(Math.min(1, lt/.7)), outP = Math.min(1, Math.max(0, (dur-lt)/.5));
+  const alpha = Math.min(inP, outP);
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  if(trans==='slide') ctx.translate(0,(1-inP)*60*u);
+  if(trans==='zoom'){ const z = .9+.1*inP; ctx.translate(W/2,H/2); ctx.scale(z,z); ctx.translate(-W/2,-H/2); }
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const maxW = W*.82;
+  // titre
+  const ts = (idx===0 ? 84 : 68)*u;
+  ctx.font = `800 ${ts}px system-ui,Arial,sans-serif`;
+  const tl = wrap(sc.title, maxW);
+  let y = H/2 - (tl.length*ts*1.15 + sc.lines.length*50*u)/2 + ts/2;
+  ctx.fillStyle = th.t;
+  tl.forEach(l=>{ ctx.fillText(l, W/2, y); y += ts*1.15; });
+  // trait d'accent
+  ctx.fillStyle = th.c; ctx.fillRect(W/2-50*u, y-ts*.3, 100*u*inP, 6*u);
+  y += 34*u;
+  // lignes (apparition échelonnée)
+  const bs = 38*u; ctx.font = `500 ${bs}px system-ui,Arial,sans-serif`;
+  sc.lines.forEach((ln,i)=>{
+    const p = ease(Math.min(1, Math.max(0,(lt-.5-i*.35)/.5)));
+    ctx.globalAlpha = alpha*p; ctx.fillStyle = th.s;
+    wrap(ln, maxW).forEach(w=>{ ctx.fillText(w, W/2, y + (1-p)*20*u); y += bs*1.3; });
+  });
+  ctx.restore();
+  // marque + progression + numéro
+  ctx.globalAlpha = .8; ctx.fillStyle = th.s; ctx.font = `600 ${22*u}px system-ui,Arial`;
+  ctx.textAlign = 'left'; ctx.fillText(brand, 30*u, H-34*u);
+  ctx.textAlign = 'right'; ctx.fillText(`${idx+1} / ${scenes.length}`, W-30*u, H-34*u);
+  ctx.globalAlpha = 1; ctx.fillStyle = th.c; ctx.fillRect(0, H-8*u, W*(t/total), 8*u);
+}
+
+function run(record){
+  const scenes = parse();
+  if(!scenes.length){ $('status').textContent = 'Le script est vide.'; return; }
+  cancelAnimationFrame(raf);
+  const [w,h] = $('fmt').value.split('x').map(Number);
+  cv.width = w; cv.height = h;
+  const dur = +$('dur').value||4, th = THEMES[+$('theme').value], trans = $('trans').value, brand = $('brand').value;
+  const total = scenes.length*dur;
+  let rec, chunks = [];
+  if(record){
+    if(!window.MediaRecorder){ $('status').textContent = "Votre navigateur ne supporte pas l'enregistrement (utilisez Chrome, Edge ou Firefox)."; return; }
+    const mime = ['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'].find(m=>MediaRecorder.isTypeSupported(m));
+    rec = new MediaRecorder(cv.captureStream(30), {mimeType:mime, videoBitsPerSecond:6e6});
+    rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+    rec.onstop = () => {
+      const url = URL.createObjectURL(new Blob(chunks,{type:'video/webm'}));
+      $('out').src = url; $('out').style.display = 'block';
+      $('dl').href = url; $('dl').style.display = 'inline-block';
+      $('status').textContent = 'Vidéo prête ✔ (' + total + ' s)';
+    };
+    rec.start();
+  }
+  $('bPrev').disabled = $('bRec').disabled = true;
+  const t0 = performance.now();
+  (function loop(now){
+    const t = (now - t0)/1000;
+    if(t >= total){
+      draw(total-.001, scenes, dur, th, trans, brand);
+      if(rec) setTimeout(()=>rec.stop(), 150);
+      $('bPrev').disabled = $('bRec').disabled = false;
+      if(!record) $('status').textContent = 'Aperçu terminé.';
+      return;
+    }
+    draw(t, scenes, dur, th, trans, brand);
+    $('status').textContent = (record?'Enregistrement… ':'Aperçu… ') + Math.ceil(total-t) + ' s restantes';
+    raf = requestAnimationFrame(loop);
+  })(t0);
+}
+$('bPrev').onclick = () => run(false);
+$('bRec').onclick = () => { $('out').style.display='none'; $('dl').style.display='none'; run(true); };
+draw(0.8, parse(), 4, THEMES[0], 'slide', '');
+</script>
+</body>
+</html>
