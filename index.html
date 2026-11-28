@@ -113,7 +113,7 @@ function wrap(text, maxW){
 function draw(t, scenes, dur, th, trans, brand){
   const W = cv.width, H = cv.height, u = Math.min(W,H)/720;
   const total = scenes.length*dur;
-  const idx = Math.min(scenes.length-1, Math.floor(t/dur));
+  const idx = Math.max(0, Math.min(scenes.length-1, Math.floor(t/dur)));
   const lt = t - idx*dur, sc = scenes[idx];
   // fond
   const g = ctx.createLinearGradient(0,0,W,H);
@@ -185,7 +185,8 @@ function run(record){
   $('bPrev').disabled = $('bRec').disabled = true;
   const t0 = performance.now();
   (function loop(now){
-    const t = (now - t0)/1000;
+    try{
+    const t = Math.max(0, (now - t0)/1000);
     if(t >= total){
       draw(total-.001, scenes, dur, th, trans, brand);
       if(rec) setTimeout(()=>rec.stop(), 150);
@@ -196,6 +197,7 @@ function run(record){
     draw(t, scenes, dur, th, trans, brand);
     $('status').textContent = (record?'Enregistrement… ':'Aperçu… ') + Math.ceil(total-t) + ' s restantes';
     raf = requestAnimationFrame(loop);
+    }catch(e){ $('status').textContent='Erreur : '+e.message; $('bPrev').disabled=$('bRec').disabled=false; }
   })(t0);
 }
 $('bPrev').onclick = () => run(false);
