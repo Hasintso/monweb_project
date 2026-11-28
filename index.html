@@ -44,7 +44,8 @@ code{background:#0f1220;padding:1px 5px;border-radius:4px}
 <code>---</code> sépare les scènes. Le bouton « Corriger » remet tout au propre.</details>
 <details open><summary>✍️ Comment écrire votre histoire libre</summary>
 1. Écrivez des phrases normales, <b>une idée par phrase</b> : « Tom était à la campagne. Il voulait aller à la plage. »<br>
-2. <b>Prénoms avec une majuscule</b> (Tom, Léa). Pour un animal : « le chat Mimi ». Rôles reconnus : la mère/maman, le père/papa, grand-mère, grand-père, le garçon, la fille, le chat.<br>
+2. <b>Prénoms avec une majuscule</b> (Tom, Léa). Pour un animal : « le chat Mimi ». Rôles reconnus : maman, papa, grand-mère, grand-père, bébé, le garçon, la fille, le frère, la sœur, le voisin, la maîtresse, le docteur, le vendeur, le chat, le chien.<br>
+2b. <b>Apparence</b> (chaque personnage a son propre look, choisi selon son nom) : écrivez « Léa aux cheveux roux », « Papa avec des lunettes », « une robe rouge », « un chat noir ». Dans le script : <code>perso Paul homme 300 roux lunettes bleu</code> (couleurs : roux, blond, brun, noir, gris · lunettes, barbe · rouge, bleu, vert, jaune, violet, rose, orange). Types : garçon, fille, homme, femme, vieux, vieille, bebe, chat, chien.<br>
 3. <b>Décor</b> : campagne · plage/mer · nuit/soir/lune · ville/magasin/route/matin. Un nouveau décor ouvre une nouvelle scène.<br>
 4. <b>Actions</b> : aller, se rendre, marcher, courir, partir, arriver → il marche · sauter, être content → il saute · saluer, coucou → il salue · vélo/bicyclette → il est à vélo.<br>
 5. <b>Paroles</b> entre guillemets : Léa dit "Bonjour !"<br>
@@ -84,7 +85,7 @@ Tom dit "Quelle belle aventure !"`;
 const nz=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
 const VERB={va:'va',aller:'va',marche:'va',court:'va',avance:'va',pedale:'va',dit:'dit',dis:'dit',parle:'dit',crie:'dit',saute:'saute',bondit:'saute',salue:'salue',coucou:'salue'};
 const BG={campagne:'campagne',jour:'jour',plage:'plage',mer:'plage',nuit:'nuit',soir:'nuit'};
-const TY={garcon:'garçon',gars:'garçon',garcons:'garçon',fille:'fille',chat:'chat',chatte:'chat',minou:'chat'};
+const TY={garcon:'garçon',gars:'garçon',garcons:'garçon',fille:'fille',chat:'chat',chatte:'chat',minou:'chat',chien:'chien',toutou:'chien',homme:'homme',monsieur:'homme',papa:'homme',pere:'homme',femme:'femme',madame:'femme',maman:'femme',mere:'femme',vieux:'vieux',papi:'vieux',vieille:'vieille',mamie:'vieille',bebe:'bebe'};
 const unq=s=>s.trim().replace(/^["']+|["']+$/g,'').trim();
 function parse(src){const scenes=[],errs=[];let sc=null,m,cur=0;
  src=src.replace(/[«“”„»]/g,'"').replace(/[’‘]/g,"'").replace(/\u00a0/g,' ');
@@ -94,7 +95,7 @@ function parse(src){const scenes=[],errs=[];let sc=null,m,cur=0;
   if(m=l.match(/^sc[eè]ne\s+(\S+)\s*([\d.,]+)?/i)){closeScene();const b=BG[nz(m[1])];if(!b)errs.push(L+'décor « '+m[1]+' » inconnu → campagne');sc={bg:b||'campagne',dur:m[2]?+m[2].replace(',','.'):0,ch:{},k:{},ev:[]};cur=0;scenes.push(sc);return}
   if(!sc){sc={bg:'campagne',dur:0,ch:{},k:{},ev:[]};cur=0;scenes.push(sc);errs.push(L+'scène ajoutée automatiquement (décor campagne)')}
   if(m=l.match(/^perso(?:nnage)?\s+(\S+)\s+(\S+)\s*(-?\d+)?(.*)$/i)){const t=TY[nz(m[2])]||'garçon';if(!TY[nz(m[2])])errs.push(L+'type « '+m[2]+' » inconnu → garçon');
-   sc.ch[m[1]]={type:t,x:Math.max(0,Math.min(1000,m[3]===undefined?500:+m[3])),bike:/v[eé]lo/i.test(m[4])};sc.k[nz(m[1])]=m[1];return}
+   sc.ch[m[1]]={type:t,x:Math.max(0,Math.min(1000,m[3]===undefined?500:+m[3])),bike:/v[eé]lo/i.test(m[4]),opts:nz(m[4]).split(/\s+/).filter(w=>w&&!/^(velo|bicyclette)$/.test(w))};sc.k[nz(m[1])]=m[1];return}
   let a=cur,b=null,rest=l;
   if(m=l.match(/^(\d+(?:[.,]\d+)?)\s*s?\s*(?:-|–|—|à|a|->)\s*(\d+(?:[.,]\d+)?)\s*s?\s+(.+)$/i)){a=+m[1].replace(',','.');b=+m[2].replace(',','.');rest=m[3]}
   const add=(who,act,arg)=>{if(b===null){b=a+(act==='dit'?Math.max(2.5,arg.length*.09+1):act==='va'?3:act==='titre'?3:act==='salue'?2:1)}sc.ev.push({a,b,who,act,arg});cur=Math.max(cur,b)};
@@ -103,33 +104,34 @@ function parse(src){const scenes=[],errs=[];let sc=null,m,cur=0;
   if(m=rest.match(/^([^\s:]+)\s*:\s*(.+)$/)){who=m[1];verb='dit';arg=m[2]}
   else if(m=rest.match(/^(\S+)\s+(\S+)\s*:?\s*(.*)$/)){who=m[1];verb=VERB[nz(m[2])];arg=m[3];if(!verb){errs.push(L+'action « '+m[2]+' » non comprise : '+l);return}}
   else{errs.push(L+'non comprise : '+l);return}
-  let key=sc.k[nz(who)];if(!key){key=who;sc.ch[who]={type:'garçon',x:500,bike:false};sc.k[nz(who)]=who;errs.push(L+'« '+who+' » ajouté automatiquement (garçon)')}
+  let key=sc.k[nz(who)];if(!key){key=who;sc.ch[who]={type:'garçon',x:500,bike:false,opts:[]};sc.k[nz(who)]=who;errs.push(L+'« '+who+' » ajouté automatiquement (garçon)')}
   arg=unq(arg);if(verb==='va'){const n=parseInt(arg);if(isNaN(n)){errs.push(L+'« va » demande une position (0-1000)');return}arg=String(Math.max(0,Math.min(1000,n)))}
   add(key,verb,arg)});
  closeScene();return{scenes,errs}}
 function fix(){const{scenes}=parse($('src').value),r=x=>+x.toFixed(1);
- $('src').value=scenes.map(s=>['scene '+s.bg+' '+r(s.dur),...Object.entries(s.ch).map(([n,c])=>`perso ${n} ${c.type} ${c.x}${c.bike?' velo':''}`),
+ $('src').value=scenes.map(s=>['scene '+s.bg+' '+r(s.dur),...Object.entries(s.ch).map(([n,c])=>`perso ${n} ${c.type} ${c.x}${c.bike?' velo':''}${(c.opts||[]).map(w=>' '+w).join('')}`),
   ...s.ev.map(e=>`${r(e.a)}-${r(e.b)} `+(e.act==='titre'?`titre "${e.arg}"`:e.act==='dit'?`${e.who} dit "${e.arg}"`:e.act==='va'?`${e.who} va ${e.arg}`:`${e.who} ${e.act}`))].join('\n')).join('\n---\n');run(false,true)}
 // ---------- histoire libre → script ----------
 const STOP='le la les un une il elle ils elles sa son ses mon ma mes ce cette puis ensuite alors mais et dans au aux a quand apres avant soudain enfin plus pendant comme ou donc or ni car y en sur sous chez pour avec sans nous vous je tu on des du de lendemain matin soir nuit quelle quel que qui ici voila c il'.split(' ');
-const ROLES=[[/grand-?mere|mamie/,'Mamie','fille'],[/grand-?pere|papi/,'Papi','garçon'],[/\bmere\b|maman/,'Maman','fille'],[/\bpere\b|papa/,'Papa','garçon'],[/\bgarcon\b|\bfils\b/,'Garçon','garçon'],[/\bfille\b|\bfillette\b/,'Fille','fille'],[/\bchat(te)?\b|minou|\bchien\b/,'Minou','chat']];
+const ROLES=[[/grand-?mere|mamie/,'Mamie','vieille'],[/grand-?pere|papi/,'Papi','vieux'],[/\bmere\b|maman/,'Maman','femme'],[/\bpere\b|papa/,'Papa','homme'],[/\bbebe\b/,'Bébé','bebe'],[/maitresse|institutrice|infirmiere|voisine|\breine\b|vendeuse|boulangere/,'Madame','femme'],[/instituteur|docteur|medecin|voisin\b|\broi\b|policier|pompier|fermier|vendeur|boulanger\b|marchand/,'Monsieur','homme'],[/\bgarcon\b|\bfils\b|\bfrere\b/,'Garçon','garçon'],[/\bfille\b|\bfillette\b|\bsoeur\b/,'Fille','fille'],[/\bchat(te)?\b|minou/,'Minou','chat'],[/\bchien(ne)?\b|toutou/,'Toutou','chien']];
 const BGW=[[/nuit|soir|etoile|lune|dormir/,'nuit'],[/plage|\bmer\b|ocean|sable/,'plage'],[/campagne|champ|ferme|village|foret/,'campagne'],[/ville|magasin|route|rue|ecole|jour|matin|marche\b/,'jour']];
 function story2script(txt){
  txt=txt.replace(/[«“”„»]/g,'"').replace(/"([^"]*)"/g,(m,q)=>'"'+q.replace(/!/g,'§1').replace(/\?/g,'§2').replace(/\./g,'§3')+'"');
  const back=s=>s.replace(/§1/g,'!').replace(/§2/g,'?').replace(/§3/g,'.'),sents=txt.split(/(?<=[.!?])\s+|\n+/).map(s=>s.trim()).filter(Boolean);
- const pos={},tp={},scenes=[];let sc=null,last=null,spk=null,n=0;
+ const pos={},tp={},OPS={},scenes=[];let sc=null,last=null,spk=null,n=0;
  const use=c=>{if(!sc.ch[c.name]){if(pos[c.name]===undefined)pos[c.name]=120+(n++%4)*230;sc.ch[c.name]={type:c.type,x:pos[c.name],bike:false}}};
  sents.forEach(raw=>{const qm=raw.match(/"([^"]*)"/),q=qm?back(qm[1]).trim():null,out=raw.replace(/"[^"]*"/g,' '),o=nz(out);
   let bg=null;for(const[r,b]of BGW)if(r.test(o)){bg=b;break}
   if(!sc||(bg&&bg!==sc.bg)){sc={bg:bg||'campagne',ch:{},ev:[]};scenes.push(sc)}
   const found=[];let w=o;ROLES.forEach(([r,name,type])=>{const m=w.match(r);if(m){found.push({i:m.index,name,type});w=w.replace(r,x=>' '.repeat(x.length))}});
   (out.match(/(^|\s)[A-ZÉÈÀÂÊÎÔÛÇ][a-zéèàâêîôûçïë]+/g)||[]).forEach(m=>{const nm=m.trim();if(STOP.includes(nz(nm)))return;found.push({i:out.indexOf(nm),name:nm,type:/(a|e|ie|ine|elle|ette)$/i.test(nm)?'fille':'garçon',cap:1})});
-  const ci=found.findIndex(c=>c.name==='Minou'&&!c.cap);if(ci>=0){const nm=found.filter(c=>c.cap).sort((a,b)=>Math.abs(a.i-found[ci].i)-Math.abs(b.i-found[ci].i))[0];if(nm&&Math.abs(nm.i-found[ci].i)<14){nm.type='chat';found.splice(ci,1)}}
+  const ci=found.findIndex(c=>(c.name==='Minou'||c.name==='Toutou')&&!c.cap);if(ci>=0){const nm=found.filter(c=>c.cap).sort((a,b)=>Math.abs(a.i-found[ci].i)-Math.abs(b.i-found[ci].i))[0];if(nm&&Math.abs(nm.i-found[ci].i)<14){nm.type=found[ci].type;found.splice(ci,1)}}
   found.sort((a,b)=>a.i-b.i);const seen=new Set(),list=found.filter(c=>!seen.has(c.name)&&seen.add(c.name));
   list.forEach(c=>{c.type=tp[c.name]||c.type;tp[c.name]=c.type});
   let subj=list[0]||null;if(!subj&&/\b(il|elle)\b/.test(o)&&last)subj=last;if(subj)last=subj;
   list.forEach(use);if(subj)use(subj);
   if(subj&&/velo|bicyclette|pedal/.test(o))sc.ch[subj.name].bike=true;
+  if(subj)[[/rouss|\broux/,'roux'],[/blond/,'blond'],[/\bbrun/,'brun'],[/\bnoir/,'noir'],[/\bgris/,'gris'],[/lunette/,'lunettes'],[/barbe|moustache/,'barbe'],[/rouge/,'rouge'],[/\bbleu/,'bleu'],[/\bvert/,'vert'],[/jaune/,'jaune'],[/violet/,'violet'],[/\brose\b/,'rose'],[/orange/,'orange']].forEach(([r,w])=>{if(r.test(o))(OPS[subj.name]=OPS[subj.name]||new Set()).add(w)});
   let did=false;const ev=l=>{sc.ev.push(l);did=true};
   if(subj){const N=subj.name;
    if(/salu|coucou|fait signe/.test(o))ev(N+' salue');
@@ -138,7 +140,7 @@ function story2script(txt){
   if(q){let who=subj;if(!who&&spk){const ot=Object.keys(sc.ch).filter(k=>k!==spk.name);who=ot.length?{name:ot[0]}:spk}
    if(who){ev(who.name+' dit "'+q+'"');spk=who}else ev('titre "'+q+'"')}
   if(!did)sc.ev.push('# (phrase non dessinée : '+back(raw).slice(0,70)+')')});
- return scenes.map(s=>['scene '+s.bg,...Object.entries(s.ch).map(([k,c])=>`perso ${k} ${c.type} ${c.x}${c.bike?' velo':''}`),...s.ev].join('\n')).join('\n---\n')}
+ return scenes.map(s=>['scene '+s.bg,...Object.entries(s.ch).map(([k,c])=>`perso ${k} ${c.type} ${c.x}${c.bike?' velo':''}${[...(OPS[k]||[])].map(w=>' '+w).join('')}`),...s.ev].join('\n')).join('\n---\n')}
 $('bStory').onclick=()=>{const t=$('story').value.trim();if(!t){$('status').textContent='Écrivez d\'abord votre histoire dans la case du haut.';return}
  $('src').value=story2script(t);const p=parse($('src').value);$('err').textContent=p.errs.join('\n');if(p.scenes.length)frame(1,p.scenes);$('status').textContent='Script créé ✔ — vérifiez-le puis cliquez sur Lecture.'};
 // ---------- outils de dessin ----------
@@ -172,6 +174,20 @@ function decor(n,t){const night=n==='nuit',sk=SKY[n]||SKY.jour,g=ctx.createLinea
  else for(let i=0;i<14;i++){const x=(i*271+Math.sin(t+i)*30)%W,y=GY-20+Math.sin(t*1.3+i*2)*40+(i%4)*30;ctx.globalAlpha=.5+.5*Math.sin(t*3+i);circ(x,y,9,'rgba(220,255,120,.25)');circ(x,y,3,'#f4ff9a');ctx.globalAlpha=1}}
 // ---------- personnages ----------
 const LOOK={garçon:{skin:'#ffd2a8',hair:'#3b2a20',shirt:'#e74c3c',pants:'#2c3e8f',shoe:'#fff'},fille:{skin:'#ffd9b8',hair:'#a85a22',shirt:'#f06ab0',pants:'#8e44ad',long:1,shoe:'#ffd23a'}};
+const hs=s=>[...s].reduce((a,c)=>(a*31+c.charCodeAt(0))>>>0,7),KS={homme:1.12,femme:1.1,bebe:.62,vieux:1.02,vieille:1};
+const SKINS=['#ffd2a8','#f1b98a','#d99a6c','#a86b45','#6f4630'],HAIRS=['#3b2a20','#8a4b1f','#e3b448','#c1561f','#1e1e24','#5a3a22'],SHIRTS=['#e74c3c','#3b82f6','#2fa84f','#f4c430','#8e44ad','#f06ab0','#f39c3d','#14b8a6'],PANTS=['#2c3e8f','#3a3a4a','#5b4636','#1f6f5c','#8e44ad'];
+const OPC={rouge:'#e74c3c',bleu:'#3b82f6',vert:'#2fa84f',jaune:'#f4c430',violet:'#8e44ad',rose:'#f06ab0',orange:'#f39c3d',blanc:'#f2f2f2',marron:'#8a5a2b'},OPH={roux:'#c1561f',rousse:'#c1561f',blond:'#e3b448',blonde:'#e3b448',brun:'#4a2f1d',brune:'#4a2f1d',noir:'#1e1e24',noire:'#1e1e24',gris:'#c9c9d2',grise:'#c9c9d2'};
+const FURS={orange:['#f39c3d','#c9701a'],roux:['#f39c3d','#c9701a'],noir:['#3a3a46','#1a1a22'],gris:['#9aa0aa','#6d7380'],blanc:['#f2f2f2','#c9c9d2'],brun:['#8a5a2b','#5e3b1a'],marron:['#8a5a2b','#5e3b1a'],jaune:['#e8c050','#b8902a'],blond:['#e8c050','#b8902a']},FK=['orange','gris','brun','noir','blanc','jaune'];
+function furOf(n,c){const o=(c.opts||[]).find(w=>FURS[w]);return FURS[o||FK[hs(n)%6]]}
+function mkLook(n,c){const h=hs(n),o=c.opts||[],t=c.type,L={skin:SKINS[h%5],hair:HAIRS[(h>>>3)%6],shirt:SHIRTS[(h>>>5)%8],pants:PANTS[(h>>>8)%5],shoe:['#fff','#ffd23a','#444'][(h>>>10)%3],k:KS[t]||1};
+ if(/^(fille|femme)$/.test(t))L.long=1;if(t==='vieille')L.bun=1;if(t==='vieux'||t==='vieille')L.hair='#c9c9d2';if(t==='vieux')L.glasses=1;
+ o.forEach(w=>{if(OPH[w])L.hair=OPH[w];else if(OPC[w])L.shirt=OPC[w];else if(w==='lunettes')L.glasses=1;else if(w==='barbe'||w==='moustache')L.beard=1});return L}
+function dog(s){ctx.save();ctx.translate(s.x,FY-s.jump);ctx.scale(s.face*1.15,1.15);const sw=s.moving?Math.sin(s.ph*1.5):0,C=s.fur[0],D=s.fur[1],bl=(s.t%3)<.13;ell(0,s.jump,52,7,'rgba(0,0,0,.2)');
+ [[-26,1],[-10,-1],[16,-1],[32,1]].forEach(l=>{limb([l[0],-26],[l[0]+sw*l[1]*13,-3],C,11);ell(l[0]+sw*l[1]*13+3,-3,10,5,'#fff2dc')});
+ limb([-38,-48],[-62,-72+Math.sin(s.t*12)*10],C,9);oell(0,-46,44,25,C);ell(8,-34,30,12,'#ffe9c7');
+ oell(44,-66,22,20,C);oell(64,-58,16,11,'#ffe9c7');circ(76,-62,5,O);oell(34,-60,9,20,D,.35);
+ if(bl)line([46,-72],[56,-72],O,3);else{ell(52,-72,6,7.5,'#fff');circ(53,-72,3.5,O);circ(54,-74,1.4,'#fff')}
+ if(s.talk)ell(66,-50,6,2+Math.abs(Math.sin(s.t*14))*5,'#7a1f2b');else ell(66,-47,5,7,'#ff7b93');ctx.restore()}
 function head(L,x,y,s){const bl=(s.t%3.5)<.14;
  if(L.long){oell(x-26,y+22,20,40,L.hair,.15)}
  oell(x-33,y+4,8,10,L.skin);ocirc(x,y,37,L.skin);
@@ -179,9 +195,11 @@ function head(L,x,y,s){const bl=(s.t%3.5)<.14;
  if(!L.long){ctx.beginPath();ctx.moveTo(x-6,y-38);ctx.quadraticCurveTo(x+4,y-58,x+18,y-46);ctx.quadraticCurveTo(x+6,y-44,x-6,y-38);ctx.fill()}else{ocirc(x-14,y-36,8,'#ff4f9a');ocirc(x+2,y-38,8,'#ff4f9a')}
  [x+3,x+23].forEach((ex,i)=>{if(bl)line([ex-7,y-1],[ex+7,y-1],O,3);else{ell(ex,y-2,8.5,11,'#fff');ctx.strokeStyle=O;ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(ex,y-2,8.5,11,0,0,7);ctx.stroke();circ(ex+2,y-1,5.5,'#3a2415');circ(ex+2,y-1,3,O);circ(ex+4,y-4,2,'#fff')}
   line([ex-8,y-18-(s.talk?2:0)],[ex+8,y-20],L.hair,3)});
+ if(L.bun)ocirc(x-20,y-40,13,L.hair);if(L.beard){ctx.fillStyle=L.hair;ctx.beginPath();ctx.arc(x+2,y+8,35,.2,Math.PI-.35);ctx.fill()}
+ if(L.glasses){ctx.strokeStyle=O;ctx.lineWidth=3;[x+3,x+23].forEach(ex=>{ctx.beginPath();ctx.arc(ex,y-2,12,0,7);ctx.stroke()});line([x+15,y-3],[x+11,y-3],O,3)}
  ell(x+10,y+14,8,5,'rgba(255,110,110,.5)');
  if(s.talk){const o=3+Math.abs(Math.sin(s.t*14))*8;ell(x+17,y+20,8,o,'#7a1f2b');ell(x+17,y+20+o*.4,5,o*.4,'#ff8a8a')}else{ctx.strokeStyle=O;ctx.lineWidth=3;ctx.beginPath();ctx.arc(x+16,y+14,9,.25,Math.PI-.55);ctx.stroke()}}
-function person(L,s){ctx.save();ctx.translate(s.x,FY-s.jump);ctx.scale(s.face,1);ell(0,s.jump,70,10,'rgba(0,0,0,.2)');
+function person(L,s){ctx.save();ctx.translate(s.x,FY-s.jump);ctx.scale(s.face*(L.k||1),L.k||1);ell(0,s.jump,70,10,'rgba(0,0,0,.2)');
  const sw=s.moving?Math.sin(s.ph):0,bob=s.moving?Math.abs(Math.sin(s.ph))*4:Math.sin(s.t*3)*2;
  if(s.bike){const R=38;[-70,70].forEach(wx=>{ctx.strokeStyle=O;ctx.lineWidth=9;ctx.beginPath();ctx.arc(wx,-R,R,0,7);ctx.stroke();ctx.strokeStyle='#444';ctx.lineWidth=5;ctx.stroke();for(let i=0;i<4;i++){const a=s.wheel+i*Math.PI/4;line([wx+Math.cos(a)*R,-R+Math.sin(a)*R],[wx-Math.cos(a)*R,-R-Math.sin(a)*R],'#aaa',2)}circ(wx,-R,5,'#ddd')});
   const B=[0,-42],S=[-20,-108],Hd=[48,-110];[[[-70,-38],B],[B,S],[[-70,-38],S],[B,Hd],[Hd,[70,-38]]].forEach(p=>limb(p[0],p[1],'#d8432f',5));line([Hd[0],Hd[1]-4],[Hd[0]+12,Hd[1]-10],O,7);
@@ -196,7 +214,7 @@ function person(L,s){ctx.save();ctx.translate(s.x,FY-s.jump);ctx.scale(s.face,1)
   let hx,hy;if(s.wave){hx=44+Math.sin(s.t*12)*14;hy=-228;limb([0,sh],[hx,hy],L.skin,11)}else{hx=Math.sin(a)*62;hy=sh+Math.cos(a)*62;limb([0,sh],[hx,hy],L.skin,11)}circ(hx,hy,8,L.skin);
   head(L,0,-210-bob,s)}
  ctx.restore()}
-function cat(s){ctx.save();ctx.translate(s.x,FY-s.jump);ctx.scale(s.face,1);const sw=s.moving?Math.sin(s.ph*1.5):0,C='#f39c3d',D='#c9701a',bl=(s.t%3)<.13;ell(0,s.jump,48,7,'rgba(0,0,0,.2)');
+function cat(s){ctx.save();ctx.translate(s.x,FY-s.jump);ctx.scale(s.face,1);const sw=s.moving?Math.sin(s.ph*1.5):0,C=s.fur[0],D=s.fur[1],bl=(s.t%3)<.13;ell(0,s.jump,48,7,'rgba(0,0,0,.2)');
  [[-24,1],[-10,-1],[14,-1],[28,1]].forEach(l=>{limb([l[0],-24],[l[0]+sw*l[1]*12,-3],C,10);ell(l[0]+sw*l[1]*12+3,-3,9,5,'#fff2dc')});
  ctx.strokeStyle=O;ctx.lineWidth=15;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(-34,-40);ctx.quadraticCurveTo(-68,-60+Math.sin(s.t*5)*12,-54,-90);ctx.stroke();ctx.strokeStyle=C;ctx.lineWidth=9;ctx.stroke();
  oell(0,-40,40,24,C);[-14,2,18].forEach(x=>line([x,-62],[x+2,-48],D,4));ell(6,-30,26,12,'#ffe9c7');
@@ -215,8 +233,8 @@ function frame(t,scenes){let acc=0,sc=scenes[scenes.length-1],lt=0;for(const s o
   for(const e of sc.ev.filter(e=>e.who===name&&e.act==='va').sort((p,q)=>p.a-q.a)){const tx=+e.arg;if(lt<e.a)break;face=tx>=cur?1:-1;if(lt>=e.b){x=cur=tx;continue}x=cur+(tx-cur)*(lt-e.a)/(e.b-e.a);moving=true;break}
   const act=a=>sc.ev.find(e=>e.who===name&&e.act===a&&lt>=e.a&&lt<e.b),px=x*1.28,jp=act('saute'),jump=jp?Math.sin(Math.PI*(lt-jp.a)/(jp.b-jp.a))*80:0,d=act('dit');
   const s={x:px,face,moving,jump,ph:px*.07,pedal:px*.06,wheel:px/38,t:lt,bike:c.bike,wave:!!act('salue'),talk:!!d};
-  if(c.type==='chat')cat(s);else person(LOOK[c.type]||LOOK.garçon,s);
-  if(d)bub.push([d.arg,px,FY-(c.type==='chat'?130:c.bike?285:285)-jump,Math.min(1,(lt-d.a)/.25,(d.b-lt)/.25)])}
+  s.fur=furOf(name,c);if(c.type==='chat')cat(s);else if(c.type==='chien')dog(s);else person(mkLook(name,c),s);
+  if(d)bub.push([d.arg,px,FY-((c.type==='chat'||c.type==='chien')?140:285*(KS[c.type]||1))-jump,Math.min(1,(lt-d.a)/.25,(d.b-lt)/.25)])}
  bub.forEach(b=>bubble(...b));
  sc.ev.filter(e=>e.act==='titre'&&lt>=e.a&&lt<e.b).forEach(e=>{ctx.save();ctx.globalAlpha=Math.min(1,(lt-e.a)/.4,(e.b-lt)/.4);ctx.font='800 76px system-ui,Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineWidth=14;ctx.strokeStyle='#2b2b5e';ctx.lineJoin='round';ctx.strokeText(e.arg,W/2,150);ctx.fillStyle='#ffe15a';ctx.fillText(e.arg,W/2,146);ctx.fillStyle='#fff';ctx.fillText(e.arg,W/2,150);ctx.restore()});
  const f=Math.max(0,Math.min(1,lt/.4,(sc.dur-lt)/.4));ctx.fillStyle='rgba(0,0,0,'+(1-f)+')';ctx.fillRect(0,0,W,H)}
